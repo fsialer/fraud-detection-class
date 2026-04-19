@@ -1,6 +1,5 @@
 import os
 from abc import ABC, abstractmethod
-from datetime import datetime
 from pathlib import Path
 
 import polars as pl
@@ -159,54 +158,90 @@ class DuckDBStore(OLAPStore):
 
 
 class DatabricksStore(OLAPStore):
-    def __init__(self, warehouse_id: str | None = None):
-        self.warehouse_id = warehouse_id or os.environ.get("DATABRICKS_WAREHOUSE_ID")
-        self._spark = None
+    def __init__(
+        self,
+        server_hostname: str | None = None,
+        http_path: str | None = None,
+        catalog: str | None = None,
+    ):
+        self.server_hostname = server_hostname or os.environ.get("DATABRICKS_SERVER_HOSTNAME")
+        self.http_path = http_path or os.environ.get("DATABRICKS_HTTP_PATH")
+        self.access_token = os.environ.get("DATABRICKS_ACCESS_TOKEN")
+        self.catalog = catalog or os.environ.get("DATABRICKS_CATALOG", "hive_metastore")
+        self._conn = None
+        self._connected = False
 
-    def _ensure_spark(self):
-        if self._spark is None:
-            try:
-                from pyspark.sql import SparkSession
+    def _ensure_connection(self):
+        if self._conn is not None:
+            return
+        if not self.server_hostname or not self.http_path:
+            raise ValueError(
+                "Databricks credentials not configured. Set:\n"
+                "  DATABRICKS_SERVER_HOSTNAME\n"
+                "  DATABRICKS_HTTP_PATH\n"
+                "  DATABRICKS_ACCESS_TOKEN"
+            )
+        import duckdb
 
-                self._spark = (
-                    SparkSession.builder.appName("fraud-etl")
-                    .config("spark.sql.warehouse.dir", "/mnt/warehouse")
-                    .getOrCreate()
-                )
-            except ImportError:
-                raise ImportError("pyspark not installed. Install with: pip install pyspark")
+        conn_str = (
+            f"databricks://token:{self.access_token}@"
+            f"{self.server_hostname}?http_path={self.http_path}&catalog={self.catalog}"
+        )
+        self._conn = duckdb.connect(conn_str)
+        self._connected = True
 
     def write_applications(self, df: pl.DataFrame) -> None:
-        self._ensure_spark()
-        self._spark.createDataFrame(df.to_pandas()).write.mode("overwrite").saveAsTable("applications")
+        self._ensure_connection()
+        import duckdb
+
+        temp = duckdb.connect(":memory:")
+        temp.execute("CREATE TABLE applications AS SELECT * FROM df")
+        temp.execute(
+            f"INSERT INTO '{self.catalog}.fraud.applications' SELECT * FROM applications"
+        )
+        temp.close()
 
     def write_transactions(self, df: pl.DataFrame) -> None:
-        self._ensure_spark()
-        self._spark.createDataFrame(df.to_pandas()).write.mode("overwrite").saveAsTable("transactions")
+        self._ensure_connection()
+        import duckdb
+
+        temp = duckdb.connect(":memory:")
+        temp.execute("CREATE TABLE transactions AS SELECT * FROM df")
+        temp.execute(
+            f"INSERT INTO '{self.catalog}.fraud.transactions' SELECT * FROM transactions"
+        )
+        temp.close()
 
     def read_applications(self) -> pl.DataFrame:
-        self._ensure_spark()
-        pdf = self._spark.read.table("applications").toPandas()
-        return pl.from_pandas(pdf)
+        self._ensure_connection()
+        return self._conn.execute(
+            f"SELECT * FROM {self.catalog}.fraud.applications ORDER BY application_id"
+        ).pl()
 
     def read_transactions(self) -> pl.DataFrame:
-        self._ensure_spark()
-        pdf = self._spark.read.table("transactions").toPandas()
-        return pl.from_pandas(pdf)
+        self._ensure_connection()
+        return self._conn.execute(
+            f"SELECT * FROM {self.catalog}.fraud.transactions ORDER BY application_id, transaction_time"
+        ).pl()
 
     def get_last_processed_id(self) -> int:
-        self._ensure_spark()
-        df = self._spark.read.table("pipeline_state").filter("key = 'last_processed_id'").toPandas()
-        if df.empty:
-            return 0
-        return int(df.iloc[0]["value"])
+        self._ensure_connection()
+        result = self._conn.execute(
+            f"SELECT value FROM {self.catalog}.fraud.pipeline_state WHERE key = 'last_processed_id'"
+        ).fetchone()
+        if result:
+            return int(result[0])
+        return 0
 
     def set_last_processed_id(self, app_id: int) -> None:
-        self._ensure_spark()
-        self._spark.createDataFrame([{"key": "last_processed_id", "value": str(app_id)}]).write.mode("append").saveAsTable("pipeline_state")
+        self._ensure_connection()
+        self._conn.execute(
+            f"INSERT OR REPLACE INTO {self.catalog}.fraud.pipeline_state (key, value) "
+            f"VALUES ('last_processed_id', '{app_id}')"
+        )
 
 
-def get_olap_store(name: str | None = None) -> OLAPStore:
+def get_olap_store(name: str = "duckdb") -> OLAPStore:
     name = name or os.environ.get("OLAP_STORE", "duckdb").lower()
 
     if name == "databricks":
