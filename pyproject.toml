@@ -1,0 +1,32 @@
+[project]
+name = "fraud-detection-class"
+version = "0.1.0"
+description = "Credit application fraud detection — Python engineering class"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "django>=5.1",
+    "psycopg2-binary>=2.9",
+    "polars>=1.0",
+    "duckdb>=1.0",
+    "jupyter>=1.0",
+    "matplotlib>=3.9",
+    "seaborn>=0.13",
+    "python-dotenv>=1.0",
+    "typer>=0.24.1",
+    "rich>=14.3.3",
+    "pyfiglet>=1.0.4",
+    "streamlit>=1.55.0",
+    "plotly>=6.6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.8",
+    "pytest>=8.0",
+    "pytest-django>=4.9",
+]
+
+
+[tool.pytest.ini_options]
+pythonpath = ["."]

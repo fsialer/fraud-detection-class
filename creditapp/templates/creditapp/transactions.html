@@ -1,0 +1,48 @@
+{% extends "creditapp/base.html" %}
+
+{% block nav_transactions %}active{% endblock %}
+{% block title %}Transactions — Santandors{% endblock %}
+
+{% block content %}
+<div class="page-header animate-in">
+    <h1>Transaction Feed</h1>
+    <p class="subtitle">Latest 50 transactions across all applicants. Refresh to see new activity.</p>
+</div>
+
+<div class="card animate-in" style="padding: 0; animation-delay: 0.05s;">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Timestamp</th>
+                <th>Applicant</th>
+                <th>Merchant</th>
+                <th>Category</th>
+                <th class="text-right">Amount</th>
+                <th>Country</th>
+                <th>Channel</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for tx in transactions %}
+            <tr>
+                <td class="mono">{{ tx.transaction_time|date:"M d H:i:s" }}</td>
+                <td><a href="{% url 'creditapp:status' tx.applicant_id %}">{{ tx.applicant.applicant_name }}</a></td>
+                <td>{{ tx.merchant }}</td>
+                <td>
+                    <span class="cat-pill {% if tx.category == 'gambling' or tx.category == 'crypto' or tx.category == 'cash' %}high-risk{% endif %}">{{ tx.category }}</span>
+                </td>
+                <td class="mono text-right">${{ tx.amount|floatformat:2 }}</td>
+                <td><span class="country-code">{{ tx.location_country }}</span></td>
+                <td>{% if tx.is_online %}Online{% else %}In-store{% endif %}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" class="empty-state">
+                    No transactions yet. Run <code>uv run python scripts/transactions.py</code> to generate data.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

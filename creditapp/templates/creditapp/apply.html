@@ -1,0 +1,57 @@
+{% extends "creditapp/base.html" %}
+
+{% block nav_apply %}active{% endblock %}
+{% block title %}Apply for Credit — Santandors{% endblock %}
+
+{% block content %}
+<div class="page-header animate-in">
+    <h1>Apply for Credit</h1>
+    <p class="subtitle">Submit a new credit application. Fraud analysis will run automatically.</p>
+</div>
+
+<div class="card animate-in" style="animation-delay: 0.05s; max-width: 640px;">
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-grid">
+            <div class="form-group form-full">
+                <label for="applicant_name">Full Name</label>
+                <input type="text" name="applicant_name" id="applicant_name" placeholder="Jane Doe" required>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" name="email" id="email" placeholder="jane@example.com" required>
+            </div>
+
+            <div class="form-group">
+                <label for="ssn_last4">SSN (last 4)</label>
+                <input type="text" name="ssn_last4" id="ssn_last4" maxlength="4" pattern="\d{4}" placeholder="0000" required>
+            </div>
+
+            <div class="form-group">
+                <label for="annual_income">Annual Income ($)</label>
+                <input type="number" name="annual_income" id="annual_income" step="0.01" placeholder="85,000" required>
+            </div>
+
+            <div class="form-group">
+                <label for="requested_amount">Requested Amount ($)</label>
+                <input type="number" name="requested_amount" id="requested_amount" step="0.01" placeholder="25,000" required>
+            </div>
+
+            <div class="form-group form-full">
+                <label for="employment_status">Employment Status</label>
+                <select name="employment_status" id="employment_status" required>
+                    <option value="" disabled selected>Select status</option>
+                    <option value="employed">Employed</option>
+                    <option value="self-employed">Self-Employed</option>
+                    <option value="unemployed">Unemployed</option>
+                </select>
+            </div>
+
+            <div class="form-group form-full" style="margin-top: 0.5rem;">
+                <button type="submit" class="btn btn-primary">Submit Application</button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends "creditapp/base.html" %}
+
+{% block nav_applications %}active{% endblock %}
+{% block title %}Credit Applications — Santandors{% endblock %}
+
+{% block content %}
+<div class="page-header animate-in">
+    <h1>Credit Applications</h1>
+    <p class="subtitle">All submitted applications and their current fraud pipeline status.</p>
+</div>
+
+{% for app in applications %}
+<div class="card animate-in" style="animation-delay: {{ forloop.counter0 }}00ms;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 1.5rem;">
+            <div>
+                <div style="font-weight: 600; margin-bottom: 0.25rem;">{{ app.applicant_name }}</div>
+                <div style="display: flex; gap: 1.25rem; font-size: 0.8rem; color: var(--text-secondary);">
+                    <span class="amount">${{ app.requested_amount|floatformat:0 }}</span>
+                    <span>{{ app.employment_status }}</span>
+                    <span class="mono" style="color: var(--text-muted);">{{ app.created_at|date:"M d, Y" }}</span>
+                </div>
+            </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span class="badge badge-{{ app.status }}">{{ app.get_status_display }}</span>
+            <a href="{% url 'creditapp:status' app.id %}" class="btn btn-sm">View</a>
+        </div>
+    </div>
+</div>
+{% empty %}
+<div class="card">
+    <div class="empty-state">
+        No applications yet. <a href="{% url 'creditapp:apply' %}">Submit one</a> or run <code>uv run python scripts/transactions.py</code>.
+    </div>
+</div>
+{% endfor %}
+{% endblock %}
