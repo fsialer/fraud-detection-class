@@ -6,7 +6,7 @@ A real-world Python engineering class built around a credit application fraud de
 
 Santandors is a Django app where people apply for credit. A fraud pipeline should analyze their transaction history and determine whether applications get approved or rejected. Right now the fraud logic lives in a messy Jupyter notebook and everything runs against the production database — your job is to productionize it.
 
-See [Issue #1](https://github.com/haro-ca/fraud-detection-class/issues/1) for the full epic, architecture diagrams (as-is vs to-be), and sub-issues.
+See [Issue #1](https://github.com/fsialer/fraud-detection-class/issues/1#issue-4291991654) for the full epic, architecture diagrams (as-is vs to-be), and sub-issues.
 
 ## Setup
 
